@@ -1,0 +1,124 @@
+■ネットワーク リソースを作成する
+az network vnet create \
+  --name sampleVNet \
+  --resource-group sampleGroup \
+  --location japaneast \
+  --address-prefix 10.0.0.0/16 \
+  --subnet-name sampleDevSubnet \
+  --subnet-prefix 10.0.1.0/24
+
+az network vnet subnet create \
+  --name sampleDevSubnet \
+  --resource-group sampleGroup \
+  --vnet-name sampleVNet \
+  --address-prefix 10.0.6.0/24
+
+az network vnet subnet create \
+  --name sampleDevVmssSubnet \
+  --resource-group sampleGroup \
+  --vnet-name sampleVNet \
+  --address-prefix 10.0.7.0/24
+
+az network public-ip create \
+  --resource-group sampleGroup \
+  --sku Basic \
+  --name sampleDevPublicIP
+
+■アプリケーション ゲートウェイの作成
+az network application-gateway create \
+  --name sampleDevAppGw \
+  --location japaneast \
+  --resource-group sampleGroup \
+  --vnet-name sampleVNet \
+  --subnet sampleDevSubnet \
+  --capacity 1 \
+  --sku Standard_Small \
+  --http-settings-cookie-based-affinity Disabled \
+  --frontend-port 80 \
+  --http-settings-port 80 \
+  --http-settings-protocol Http \
+  --public-ip-address sampleDevPublicIP
+
+■バックエンド プールの追加
+az network application-gateway address-pool create \
+  --gateway-name sampleDevAppGw \
+  --resource-group sampleGroup \
+  --name sampleDevAppGwBEPool
+
+■リスナーの追加
+az network application-gateway http-listener create \
+  --name sampleDevAppGwListener \
+  --frontend-ip appGatewayFrontendIP \
+  --frontend-port appGatewayFrontendPort \
+  --resource-group sampleGroup \
+  --gateway-name sampleDevAppGw \
+  --host-name sample-dev-front.azurefd.net
+az network application-gateway http-listener create \
+  --name sampleDevApiAppGwListener \
+  --frontend-ip appGatewayFrontendIP \
+  --frontend-port appGatewayFrontendPort \
+  --resource-group sampleGroup \
+  --gateway-name sampleDevAppGw \
+  --host-name sample-dev-backoffice.azurefd.net
+az network application-gateway http-listener create \
+  --name sampleDevBOAppGwListener \
+  --frontend-ip appGatewayFrontendIP \
+  --frontend-port appGatewayFrontendPort \
+  --resource-group sampleGroup \
+  --gateway-name sampleDevAppGw \
+  --host-name sample-dev-api.azurefd.net
+
+
+■ルーティング規則の追加
+az network application-gateway rule create \
+  --gateway-name sampleDevAppGw \
+  --name sampleDevAppGwRule1 \
+  --resource-group sampleGroup \
+  --http-listener sampleDevAppGwListener \
+  --rule-type Basic \
+  --address-pool sampleDevAppGwBEPool
+
+az network application-gateway rule create \
+  --gateway-name sampleDevAppGw \
+  --name sampleDevAppGwRule2 \
+  --resource-group sampleGroup \
+  --http-listener sampleDevApiAppGwListener \
+  --rule-type Basic \
+  --address-pool sampleDevAppGwBEPool
+
+az network application-gateway rule create \
+  --gateway-name sampleDevAppGw \
+  --name sampleDevAppGwRule3 \
+  --resource-group sampleGroup \
+  --http-listener sampleDevBOAppGwListener \
+  --rule-type Basic \
+  --address-pool sampleDevAppGwBEPool
+
+az network application-gateway rule delete \
+  --gateway-name sampleDevAppGw \
+  --name contosoRule \
+  --resource-group sampleGroup
+
+■仮想マシン スケール セットの作成
+az vmss create \
+  --name sampleDevVmss \
+  --resource-group sampleGroup \
+  --image sampleApi00-image-20200106151130 \
+  --admin-username azureuser \
+  --admin-password df3m41aasdas13 \
+  --instance-count 1 \
+  --vnet-name sampleVNet \
+  --subnet sampleDevVmssSubnet \
+  --vm-sku Standard_A1_v2 \
+  --upgrade-policy-mode Automatic \
+  --app-gateway sampleDevAppGw \
+  --backend-pool-name sampleDevAppGwBEPool
+
+
+
+az network vnet subnet create \
+  --name myBackendSubnet \
+  --resource-group myResourceGroupAG \
+  --vnet-name myVNet \
+  --address-prefix 10.0.7.0/24
+
